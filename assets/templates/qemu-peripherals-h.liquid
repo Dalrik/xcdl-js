@@ -106,21 +106,30 @@ typedef struct {
         // {{ deviceFamily }} {{ periphName }} ({{ peripheral.description }}) registers.
         struct { 
 {% for register in peripheral.registers %}
+{% if register.dim %}
+{% assign basename = register.name | remove: "%s" %}
+          Object *{{ basename | downcase | c_reserved }}[{{register.dim}}]; // {{ register.addressOffset}} ({{ register.description }})
+{% else %}
           Object *{{ register.name | downcase | c_reserved }}; // {{ register.addressOffset}} ({{ register.description }}) 
+{% endif %}
 {% endfor %}
         } reg;
 
         struct { 
 {% for register in peripheral.registers %}
 
-          // {{ register.name }} ({{ register.description }}) bitfields.
+          // {{ register.name | replace: "%s", "n" }} ({{ register.description }}) bitfields.
           struct { 
 {% if register.fields %}
 {% for field in register.fields %}
             Object *{{ field.name | downcase | c_reserved }}; // [{{ field.bitOffset }}:{{ field.bitOffset | plus: field.bitWidth | minus: 1 }}] {{ field.description }}
 {% endfor %} 
 {% endif %}
+{% if register.dim %}
+          } {{ register.name | remove: "%s" | downcase | c_reserved }}[{{ register.dim }}];
+{% else %}
           } {{ register.name | downcase | c_reserved }}; 
+{% endif %}
 {% endfor %}
         } fld;
       } {{ deviceFamily | downcase }};

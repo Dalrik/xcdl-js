@@ -40,14 +40,36 @@ static void {{ deviceName | downcase }}_{{ periphName | downcase }}_create_objec
 
     // Registers. 
 {% for register in peripheral.registers %}
+{% if register.dim %}
+{% assign names = register.dimIndex | split: "," %}
+{% for i in (1..register.dim) %}
+{% assign idx = i | minus: 1 %}
+{% assign basename = register.name | remove: "%s" %}
+    state->u.{{ deviceFamily | downcase }}.reg.{{ basename | downcase | c_reserved }}[{{ idx }}] = cm_object_get_child_by_name(obj, "{{ register.name | replace: "%s", names[idx] }}");
+{% endfor %}
+{% else %}
     state->u.{{ deviceFamily | downcase }}.reg.{{ register.name | downcase | c_reserved }} = cm_object_get_child_by_name(obj, "{{ register.name }}");
+{% endif %}
 {% endfor %}
 {% for register in peripheral.registers %}    
+{% if register.dim %}
+{% assign names = register.dimIndex | split: "," %}
+{% for i in (1..register.dim) %}
+{% assign idx = i | minus: 1 %}
+{% assign basename = register.name | remove: "%s" %}
+{% assign replacename = register.name | replace: "%s", names[idx] %}
+    // {{ replacename }} bitfields.
+{% for field in register.fields %}
+    state->u.{{ deviceFamily | downcase }}.fld.{{ basename | downcase | c_reserved }}[{{ idx }}].{{ field.name | downcase | c_reserved }} = cm_object_get_child_by_name(state->u.{{ deviceFamily | downcase }}.reg.{{ basename | downcase | c_reserved }}[{{ idx }}], "{{ field.name }}");
+{% endfor %}
+{% endfor %}
+{% else %}
 
     // {{ register.name }} bitfields.
 {% for field in register.fields %}
     state->u.{{ deviceFamily | downcase }}.fld.{{ register.name | downcase | c_reserved }}.{{ field.name | downcase | c_reserved }} = cm_object_get_child_by_name(state->u.{{ deviceFamily | downcase }}.reg.{{ register.name | downcase | c_reserved }}, "{{ field.name }}");
 {% endfor %} 
+{% endif %}
 {% endfor %}
 }
 
